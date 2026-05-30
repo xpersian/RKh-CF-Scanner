@@ -100,7 +100,6 @@ run_windows.bat
 ```text
 RKh-CFS-Termux-v0.1.2/
 ├─ rkh_cfs_termux.py
-├─ install_termux.sh
 ├─ run.sh
 ├─ requirements.txt
 └─ results/
@@ -113,14 +112,14 @@ Copy the Termux ZIP file to your phone, then run:
 ```bash
 pkg update -y
 pkg install -y unzip
+wget https://github.com/rezakhosh78/RKh-CF-Scanner/releases/download/v0.1.2/RKh-CFS-Termux-v0.1.2.zip
 unzip RKh-CFS-Termux-v0.1.2.zip
+pip install -r requirements.txt
 cd RKh-CFS-Termux-v0.1.2
-chmod +x install_termux.sh run.sh
-./install_termux.sh
+chmod +x run.sh
 ./run.sh
 ```
 
-The `install_termux.sh` script installs required packages and, if `xray` is not already present, downloads the matching Android Xray binary for your CPU architecture.
 
 > Android cannot run Windows `xray.exe`. The Termux edition uses the Android/Linux `xray` binary.
 
