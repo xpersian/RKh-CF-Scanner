@@ -101,6 +101,9 @@ run_windows.bat
 RKh-CFS-Termux-v0.1.2/
 ├─ rkh_cfs_termux.py
 ├─ run.sh
+├─ xray
+├─ geoip.dat
+├─ geosite.dat
 ├─ requirements.txt
 └─ results/
 ```
@@ -112,6 +115,7 @@ Copy the Termux ZIP file to your phone, then run:
 ```bash
 pkg update -y
 pkg install -y unzip
+pkg install python -y
 wget https://github.com/rezakhosh78/RKh-CF-Scanner/releases/download/v0.1.2/RKh-CFS-Termux-v0.1.2.zip
 unzip RKh-CFS-Termux-v0.1.2.zip
 pip install -r requirements.txt
