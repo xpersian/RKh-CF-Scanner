@@ -1,0 +1,109 @@
+name: Build and Upload v0.1.4 Assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  VERSION: "0.1.4"
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check required files
+        run: |
+          test -f "RKh-CFS-v${VERSION}.py"
+          test -f "RKh-CFS-Termux-v${VERSION}.py"
+          test -f "run_windows.bat"
+          test -f "run.sh"
+          test -f "requirements.txt"
+          test -f "README.md"
+          test -f "README_FA.md"
+          test -d "ip-ranges"
+
+          test -f "xray.exe"
+          test -f "xray"
+          test -f "geoip.dat"
+          test -f "geosite.dat"
+
+      - name: Prepare Windows ZIP
+        run: |
+          WIN_DIR="RKh-CFS-v${VERSION}"
+
+          mkdir -p "dist/${WIN_DIR}"
+          mkdir -p "dist/${WIN_DIR}/configs/temp"
+          mkdir -p "dist/${WIN_DIR}/results"
+
+          cp "RKh-CFS-v${VERSION}.py" "dist/${WIN_DIR}/"
+          cp "run_windows.bat" "dist/${WIN_DIR}/"
+          cp "requirements.txt" "dist/${WIN_DIR}/"
+          cp "README.md" "dist/${WIN_DIR}/"
+          cp "README_FA.md" "dist/${WIN_DIR}/"
+          cp -r "ip-ranges" "dist/${WIN_DIR}/"
+
+          cp "xray.exe" "dist/${WIN_DIR}/"
+          cp "geoip.dat" "dist/${WIN_DIR}/"
+          cp "geosite.dat" "dist/${WIN_DIR}/"
+
+          cd dist
+          zip -r "RKh-CFS-win-v${VERSION}.zip" "${WIN_DIR}" \
+            -x "**/__pycache__/*" \
+            -x "**/*.pyc"
+
+      - name: Prepare Termux ZIP
+        run: |
+          TERMUX_DIR="RKh-CFS-Termux-v${VERSION}"
+
+          mkdir -p "dist/${TERMUX_DIR}"
+          mkdir -p "dist/${TERMUX_DIR}/configs/temp"
+          mkdir -p "dist/${TERMUX_DIR}/results"
+
+          cp "RKh-CFS-Termux-v${VERSION}.py" "dist/${TERMUX_DIR}/"
+          cp "run.sh" "dist/${TERMUX_DIR}/"
+          cp "requirements.txt" "dist/${TERMUX_DIR}/"
+          cp "README.md" "dist/${TERMUX_DIR}/"
+          cp "README_FA.md" "dist/${TERMUX_DIR}/"
+          cp -r "ip-ranges" "dist/${TERMUX_DIR}/"
+
+          cp "xray" "dist/${TERMUX_DIR}/"
+          cp "geoip.dat" "dist/${TERMUX_DIR}/"
+          cp "geosite.dat" "dist/${TERMUX_DIR}/"
+
+          chmod +x "dist/${TERMUX_DIR}/run.sh"
+          chmod +x "dist/${TERMUX_DIR}/xray"
+
+          cd dist
+          zip -r "RKh-CFS-Termux-v${VERSION}.zip" "${TERMUX_DIR}" \
+            -x "**/__pycache__/*" \
+            -x "**/*.pyc" \
+            -x "**/install_termux.sh" \
+            -x "**/install_termux_deps.sh" \
+            -x "**/run_termux.sh"
+
+      - name: Check ZIP contents
+        run: |
+          echo "Windows ZIP contents:"
+          unzip -l "dist/RKh-CFS-win-v${VERSION}.zip" | grep -E "RKh-CFS-v${VERSION}.py|xray.exe|geoip.dat|geosite.dat|run_windows.bat"
+
+          echo "Termux ZIP contents:"
+          unzip -l "dist/RKh-CFS-Termux-v${VERSION}.zip" | grep -E "RKh-CFS-Termux-v${VERSION}.py|xray|geoip.dat|geosite.dat|run.sh"
+
+          echo "ZIP sizes:"
+          ls -lh dist/*.zip
+
+      - name: Upload ZIP files to GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "v${VERSION}" \
+            "dist/RKh-CFS-win-v${VERSION}.zip" \
+            "dist/RKh-CFS-Termux-v${VERSION}.zip" \
+            --clobber
