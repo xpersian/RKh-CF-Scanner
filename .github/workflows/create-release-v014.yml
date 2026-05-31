@@ -1,0 +1,192 @@
+name: Create v0.1.4 Release with Assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  VERSION: "0.1.4"
+  TAG_NAME: "v0.1.4"
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check project files
+        run: |
+          missing=0
+
+          check_file() {
+            if [ ! -f "$1" ]; then
+              echo "❌ Missing file: $1"
+              missing=1
+            else
+              echo "✅ Found file: $1"
+            fi
+          }
+
+          check_dir() {
+            if [ ! -d "$1" ]; then
+              echo "❌ Missing directory: $1"
+              missing=1
+            else
+              echo "✅ Found directory: $1"
+            fi
+          }
+
+          check_file "RKh-CFS-v${VERSION}.py"
+          check_file "RKh-CFS-Termux-v${VERSION}.py"
+          check_file "run_windows.bat"
+          check_file "run.sh"
+          check_file "requirements.txt"
+          check_file "README.md"
+          check_file "README_FA.md"
+          check_dir  "ip-ranges"
+
+          if [ "$missing" -eq 1 ]; then
+            echo "Some required files are missing."
+            exit 1
+          fi
+
+      - name: Download Xray binaries
+        run: |
+          mkdir -p xray-downloads/windows
+          mkdir -p xray-downloads/android
+
+          wget -O xray-downloads/xray-windows.zip \
+            https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip
+
+          wget -O xray-downloads/xray-android.zip \
+            https://github.com/XTLS/Xray-core/releases/latest/download/Xray-android-arm64-v8a.zip
+
+          unzip -o xray-downloads/xray-windows.zip -d xray-downloads/windows
+          unzip -o xray-downloads/xray-android.zip -d xray-downloads/android
+
+          test -f xray-downloads/windows/xray.exe
+          test -f xray-downloads/windows/geoip.dat
+          test -f xray-downloads/windows/geosite.dat
+          test -f xray-downloads/android/xray
+          test -f xray-downloads/android/geoip.dat
+          test -f xray-downloads/android/geosite.dat
+
+          chmod +x xray-downloads/android/xray
+
+      - name: Prepare Windows ZIP
+        run: |
+          WIN_DIR="RKh-CFS-v${VERSION}"
+
+          mkdir -p "dist/${WIN_DIR}"
+          mkdir -p "dist/${WIN_DIR}/configs/temp"
+          mkdir -p "dist/${WIN_DIR}/results"
+
+          cp "RKh-CFS-v${VERSION}.py" "dist/${WIN_DIR}/"
+          cp "run_windows.bat" "dist/${WIN_DIR}/"
+          cp "requirements.txt" "dist/${WIN_DIR}/"
+          cp "README.md" "dist/${WIN_DIR}/"
+          cp "README_FA.md" "dist/${WIN_DIR}/"
+          cp -r "ip-ranges" "dist/${WIN_DIR}/"
+
+          cp "xray-downloads/windows/xray.exe" "dist/${WIN_DIR}/"
+          cp "xray-downloads/windows/geoip.dat" "dist/${WIN_DIR}/"
+          cp "xray-downloads/windows/geosite.dat" "dist/${WIN_DIR}/"
+
+          cd dist
+          zip -r "RKh-CFS-win-v${VERSION}.zip" "${WIN_DIR}" \
+            -x "**/__pycache__/*" \
+            -x "**/*.pyc"
+
+      - name: Prepare Termux ZIP
+        run: |
+          TERMUX_DIR="RKh-CFS-Termux-v${VERSION}"
+
+          mkdir -p "dist/${TERMUX_DIR}"
+          mkdir -p "dist/${TERMUX_DIR}/configs/temp"
+          mkdir -p "dist/${TERMUX_DIR}/results"
+
+          cp "RKh-CFS-Termux-v${VERSION}.py" "dist/${TERMUX_DIR}/"
+          cp "run.sh" "dist/${TERMUX_DIR}/"
+          cp "requirements.txt" "dist/${TERMUX_DIR}/"
+          cp "README.md" "dist/${TERMUX_DIR}/"
+          cp "README_FA.md" "dist/${TERMUX_DIR}/"
+          cp -r "ip-ranges" "dist/${TERMUX_DIR}/"
+
+          cp "xray-downloads/android/xray" "dist/${TERMUX_DIR}/"
+          cp "xray-downloads/android/geoip.dat" "dist/${TERMUX_DIR}/"
+          cp "xray-downloads/android/geosite.dat" "dist/${TERMUX_DIR}/"
+
+          chmod +x "dist/${TERMUX_DIR}/run.sh"
+          chmod +x "dist/${TERMUX_DIR}/xray"
+
+          cd dist
+          zip -r "RKh-CFS-Termux-v${VERSION}.zip" "${TERMUX_DIR}" \
+            -x "**/__pycache__/*" \
+            -x "**/*.pyc" \
+            -x "**/install_termux.sh" \
+            -x "**/install_termux_deps.sh" \
+            -x "**/run_termux.sh"
+
+      - name: Check ZIP contents
+        run: |
+          echo "Windows ZIP contents:"
+          unzip -l "dist/RKh-CFS-win-v${VERSION}.zip" | grep -E "RKh-CFS-v${VERSION}.py|xray.exe|geoip.dat|geosite.dat|run_windows.bat"
+
+          echo "Termux ZIP contents:"
+          unzip -l "dist/RKh-CFS-Termux-v${VERSION}.zip" | grep -E "RKh-CFS-Termux-v${VERSION}.py|xray|geoip.dat|geosite.dat|run.sh"
+
+          echo "ZIP sizes:"
+          ls -lh dist/*.zip
+
+      - name: Write release notes
+        run: |
+          cat > release-notes.md <<'EOF'
+          ✨ تغییرات مهم v0.1.4
+
+          - TUI رنگی‌تر و مرتب‌تر با Rich.
+          - گزینه برگشت در مراحل اصلی اضافه شده.
+          - منوها هم با عدد کار می‌کنند، هم با کلیدهای جهت‌دار:
+            - `↑ / ↓`
+            - `Space`
+            - `Enter`
+          - دو حالت اصلی برای انتخاب تارگت:
+            - ورود دستی IP / CIDR / Range
+            - استفاده از لیست آماده ISPها
+          - لیست ISPها به دو دسته تقسیم شده:
+            - ISPهای ایران
+            - ISPهای خارج
+          - بخش ورود دستی چندخطی شده و می‌توانی چندین رنج را یکجا Paste کنی.
+          - مقدار پیش‌فرض Maximum targets بی‌نهایت است؛ با Enter همه تارگت‌ها اسکن می‌شوند.
+          - اگر وسط scan، re-check یا speed-test کلید `Ctrl+C` بزنی، خروجی‌های جمع‌شده تا همان لحظه ذخیره می‌شوند.
+          - در مرحله Re-checking Latency، متن `5 real Xray test(s) per IP` برای تست واقعی چندباره هر IP نمایش داده می‌شود.
+          - نسخه Termux حالا با `run.sh` اجرا می‌شود و اسکریپت نصب جداگانه ندارد.
+
+          🚀 قابلیت‌ها
+
+          - تست واقعی VLESS با Xray Core
+          - ورود دستی IP، CIDR و Range
+          - امکان Paste کردن چندین تارگت به‌صورت یکجا
+          - لیست آماده ISPها
+          - دسته‌بندی ایران و خارج
+          - انتخاب چند ISP برای اسکن
+          - انتخاب تعداد Worker قبل از اسکن
+          - Re-check اختیاری برای latency
+          - Speed-test اختیاری
+          - خروجی TXT و CSV
+          - حالت CLI برای اجرای سریع‌تر و خودکار
+          EOF
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${TAG_NAME}" \
+            "dist/RKh-CFS-win-v${VERSION}.zip" \
+            "dist/RKh-CFS-Termux-v${VERSION}.zip" \
+            --title "RKh-CFS v${VERSION}" \
+            --notes-file release-notes.md
