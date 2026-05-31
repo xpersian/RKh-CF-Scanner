@@ -18,7 +18,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Check required files
+      - name: Check project files
         run: |
           test -f "RKh-CFS-v${VERSION}.py"
           test -f "RKh-CFS-Termux-v${VERSION}.py"
@@ -29,10 +29,28 @@ jobs:
           test -f "README_FA.md"
           test -d "ip-ranges"
 
-          test -f "xray.exe"
-          test -f "xray"
-          test -f "geoip.dat"
-          test -f "geosite.dat"
+      - name: Download Xray binaries
+        run: |
+          mkdir -p xray-downloads/windows
+          mkdir -p xray-downloads/android
+
+          wget -O xray-downloads/xray-windows.zip \
+            https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip
+
+          wget -O xray-downloads/xray-android.zip \
+            https://github.com/XTLS/Xray-core/releases/latest/download/Xray-android-arm64-v8a.zip
+
+          unzip -o xray-downloads/xray-windows.zip -d xray-downloads/windows
+          unzip -o xray-downloads/xray-android.zip -d xray-downloads/android
+
+          test -f xray-downloads/windows/xray.exe
+          test -f xray-downloads/windows/geoip.dat
+          test -f xray-downloads/windows/geosite.dat
+          test -f xray-downloads/android/xray
+          test -f xray-downloads/android/geoip.dat
+          test -f xray-downloads/android/geosite.dat
+
+          chmod +x xray-downloads/android/xray
 
       - name: Prepare Windows ZIP
         run: |
@@ -49,9 +67,9 @@ jobs:
           cp "README_FA.md" "dist/${WIN_DIR}/"
           cp -r "ip-ranges" "dist/${WIN_DIR}/"
 
-          cp "xray.exe" "dist/${WIN_DIR}/"
-          cp "geoip.dat" "dist/${WIN_DIR}/"
-          cp "geosite.dat" "dist/${WIN_DIR}/"
+          cp "xray-downloads/windows/xray.exe" "dist/${WIN_DIR}/"
+          cp "xray-downloads/windows/geoip.dat" "dist/${WIN_DIR}/"
+          cp "xray-downloads/windows/geosite.dat" "dist/${WIN_DIR}/"
 
           cd dist
           zip -r "RKh-CFS-win-v${VERSION}.zip" "${WIN_DIR}" \
@@ -73,9 +91,9 @@ jobs:
           cp "README_FA.md" "dist/${TERMUX_DIR}/"
           cp -r "ip-ranges" "dist/${TERMUX_DIR}/"
 
-          cp "xray" "dist/${TERMUX_DIR}/"
-          cp "geoip.dat" "dist/${TERMUX_DIR}/"
-          cp "geosite.dat" "dist/${TERMUX_DIR}/"
+          cp "xray-downloads/android/xray" "dist/${TERMUX_DIR}/"
+          cp "xray-downloads/android/geoip.dat" "dist/${TERMUX_DIR}/"
+          cp "xray-downloads/android/geosite.dat" "dist/${TERMUX_DIR}/"
 
           chmod +x "dist/${TERMUX_DIR}/run.sh"
           chmod +x "dist/${TERMUX_DIR}/xray"
