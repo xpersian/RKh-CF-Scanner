@@ -1,4 +1,4 @@
-# 🐦‍🔥 SIMORGH Scanner v0.3.0
+# 🦅 SIMORGH Scanner v0.3.0
 
 [فارسی](README_FA.md)
 
@@ -10,6 +10,13 @@ Version **0.3.0** introduces a complete neon-retro Web UI redesign, a fully offl
 
 ---
 
+## 🖼️ Screenshots
+
+| Windows Standalone | Windows Standalone | Android APK |
+|---|---|---|
+| <img src="assets/screenshots/simorgh-scanner-windows-home.png" alt="SIMORGH Scanner Windows Standalone home screen" width="100%"> | <img src="assets/screenshots/simorgh-scanner-windows-results.png" alt="SIMORGH Scanner Windows Standalone results screen" width="100%"> | <img src="assets/screenshots/simorgh-scanner-android-results.png" alt="SIMORGH Scanner Android APK results screen" width="100%"> |
+
+---
 ## 📦 Editions
 
 | Edition | Release file | Runtime |
@@ -116,6 +123,7 @@ The summary also shows:
 - It returns automatically when scrolling upward.
 - Enter and exit animations are smooth and immediate.
 - Button hover effects remain active while floating.
+- Unwanted white hover borders were removed.
 
 ### 🌐 Local server
 
