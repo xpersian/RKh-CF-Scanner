@@ -1,4 +1,3 @@
-![Ping Logo](ping_logo.png)
 
 # RKh-CFS v0.2.0 | @pingplas_channel ⚡
 
