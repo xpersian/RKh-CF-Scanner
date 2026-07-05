@@ -1,206 +1,202 @@
-![Ping Logo](ping_logo.png)
+<div dir="rtl">
 
-# RKh-CFS v0.2.0 | @pingplas_channel ⚡
+# 🦅 اسکنر سیمرغ v0.3.0
 
-اسکنر **Clean-IP کلادفلر** برای کانفیگ‌های **VLESS**.
+[English](README.md)
 
-RKh-CFS برای تست IP، CIDR، رنج‌های دستی و لیست‌های آماده ISP ساخته شده و نتیجه‌ها را به‌صورت رتبه‌بندی‌شده خروجی می‌دهد.  
-در خط نسخه v0.2.0، پروژه حالا شامل **Web UI مدرن**، نسخه **Windows Single EXE WebUI** و نسخه بهینه‌شده **Android APK** است.
+اسکنر Clean-IP کلادفلر برای کانفیگ‌های VLESS. اسکنر سیمرغ می‌تواند IP تکی، CIDR، رنج‌های دستی و لیست‌های آماده ISP را آزمایش کند و نتایج IP و کانفیگ را به‌صورت رتبه‌بندی‌شده خروجی بگیرد.
+
+نسخه **0.3.0** شامل بازطراحی کامل Web UI با ظاهر نئونی و رترو، نسخه مستقل و کاملاً آفلاین ویندوز و APK امضاشده اندروید برای معماری `arm64-v8a` با بک‌اند بومی Go است.
+
+> این پروژه را فقط برای کانفیگ‌های شخصی و رنج‌هایی که مجاز به آزمایش آن‌ها هستید استفاده کنید.
 
 ---
 
 ## 📦 نسخه‌ها
 
-| نسخه | فایل / پروژه اصلی | محیط اجرا |
+| نسخه | فایل انتشار | محیط اجرا |
 |---|---|---|
-| Windows Web UI Single EXE | `RKh-CFS-win-v0.2.0.exe` | ویندوز + Python 3 نصب‌شده |
-| Windows Web UI package | `web_ui.py` / `run_webui.bat` | ویندوز + Python 3 + فایل‌های Xray |
-| Windows Python scanner | `RKh-CFS-v0.2.0.py` | ویندوز + Python 3 + `xray.exe` |
-| Android APK | `RKh-CFS-Android-v0.2.0.apk` | APK اندروید با backend بومی Go |
-| Android / Termux legacy | پکیج Termux | اندروید + Termux + باینری Android/Linux `xray` |
+| Windows Standalone | `SIMORGH-Scanner-v0.3.0-Windows-x64.exe` | کاملاً آفلاین؛ بدون نیاز به نصب Python |
+| Android APK | `SIMORGH-Scanner-v0.3.0-arm64-v8.apk` | اندروید 7 و بالاتر؛ بک‌اند Go؛ فقط `arm64-v8a` |
 
+فایل‌های نسخه 0.3.0 از بخش **Releases** ریپازیتوری در دسترس هستند.
 
 ---
 
-## 📥 فایل‌های نهایی ریلیز
+## ✨ تغییرات مهم نسخه 0.3.0
 
-اسم فایل‌های نهایی ریلیز:
+### 🎨 رابط کاربری
 
-```text
-Windows Web UI: RKh-CFS-win-v0.2.0.exe
-Android APK:    RKh-CFS-Android-v0.2.0.apk
-Termux ZIP:     RKh-CFS-Termux-v0.2.0.zip
-```
+- بازطراحی کامل Web UI با ظاهر نئونی، رترو و مناسب ویندوز
+- تغییر نام رابط به **SIMORGH SCANNER**
+- اضافه‌شدن افکت چشمک‌زن ملایم نئونی به عنوان برنامه
+- اضافه‌شدن هدر ثابت شامل:
+  - انتخاب زبان `FA / EN`
+  - رادار متحرک
+  - وضعیت فعلی اجرای برنامه
+- بهبود نمایش رابط در رزولوشن‌ها و اندازه‌های مختلف
 
----
+### 📑 ساختار صفحات
 
-## ✨ تغییرات مهم v0.2.0
+رابط کاربری به چهار صفحه مستقل تقسیم شده است:
 
-- اضافه شدن **Web UI** 
-- پشتیبانی از زبان فارسی و انگلیسی؛ زبان پیش‌فرض انگلیسی است.
-- اضافه شدن نسخه Android APK.
-- نسخه **Windows Single EXE WebUI** اضافه شد.
-- پنل Live Ranking با ستون‌های:
-  - IP
-  - Stage
+- 🔍 **Scanner**
+- 📊 **Results**
+- 📁 **Files**
+- 🧾 **Log**
+
+رفتارهای جدید:
+
+- صفحه پیش‌فرض روی **Scanner** قرار دارد.
+- بعد از زدن Start Scan، برنامه خودکار وارد **Results** می‌شود.
+- بخش **Live Work Log** در صفحه جداگانه نمایش داده می‌شود.
+- نوار ناوبری ثابت بین صفحات اضافه شده است.
+- دکمه بازگشت به بالای صفحه در گوشه پایین سمت راست قرار دارد.
+
+### 🔍 کنترل‌های Scanner
+
+صفحه Scanner شامل دکمه‌های زیر است:
+
+- ▶️ Start Scan
+- ⏹️ Stop
+- ⏯️ Continue
+- 🧹 Clear
+- ❌ Cancel
+
+تغییرات دیگر Scanner:
+
+- ISP پیش‌فرض روی **International** تنظیم شده است.
+- رادار متحرک به هدر اصلی منتقل شده است.
+- امکان واردکردن لیست ISP سفارشی با فرمت `.txt` وجود دارد.
+- تارگت دستی و لیست‌های داخلی ISP همچنان پشتیبانی می‌شوند.
+
+### 📊 نتایج
+
+- نتایج به‌صورت کارت‌های مستقل نئونی نمایش داده می‌شوند.
+- هر IP یک کارت نتیجه جدا دارد.
+- هر کارت اطلاعات زیر را نشان می‌دهد:
+  - ⚡ Latency
+  - 📈 Average Latency
+  - ✅ Pass
+  - 🚀 Speed
+- نشانگر نئونی کنار عنوان نتایج قرار گرفته است.
+- بخش `SORT BY` داخل حباب مستقل قرار دارد.
+- مرتب‌سازی بر اساس موارد زیر انجام می‌شود:
   - Latency
-  - Avg Latency
+  - Average Latency
   - Pass
   - Speed
-- امکان sort کردن Live Ranking با کلیک روی عنوان ستون‌ها.
-- اولویت پیش‌فرض مرتب‌سازی Live Ranking بر اساس latency است.
-- Scan Progress حالا مراحل scan، re-check و speed-test را دنبال می‌کند.
-- انتخاب ISP list با checkbox، چندانتخابی، Check all و Clear.
-- دکمه‌های Stop و Continue در Web UI.
-- دانلود فایل‌های خروجی از داخل مرورگر.
-- خروجی Best Configs و Final Ranked Configs.
-- بهینه‌سازی Android Go برای موبایل:
-- جدول Live Ranking فشرده‌تر و مناسب گوشی
+
+### 📶 پیشرفت اسکن
+
+نوار پیشرفت قبلی با سه کارت مستقل جایگزین شده است:
+
+- 🔵 `SCAN`
+- 🟣 `RE-CHECK`
+- 🟪 `SPEED`
+
+هر کارت اطلاعات زیر را نمایش می‌دهد:
+
+- درصد پیشرفت
+- تعداد تارگت انجام‌شده
+- تعداد باقی‌مانده
+- وضعیت فعلی مرحله
+
+خلاصه وضعیت شامل این موارد است:
+
+- ✅ Clean
+- ❌ Fail
+- 🔄 Re-check
+- 🚀 Speed
+
+### 📌 کنترل‌های شناور
+
+- حباب کنترل‌ها در حالت عادی بالای `SORT BY` قرار دارد.
+- وقتی محل اصلی حباب از صفحه خارج شود، به حالت شناور درمی‌آید.
+- هنگام اسکرول به بالا خودکار به محل اصلی برمی‌گردد.
+- انیمیشن ورود و خروج روان و بدون تأخیر است.
+
+### 🌐 سرور محلی
+
+Web UI از یک آدرس ثابت استفاده می‌کند:
+
+```text
+http://127.0.0.1:21301
+```
+
+تنظیمات:
+
+```text
+Local IP: 127.0.0.1
+Port:     21301
+Version:  v0.3.0
+```
+
+سرور فقط روی Loopback اجرا می‌شود و برای انتشار مستقیم روی شبکه عمومی طراحی نشده است.
 
 ---
 
-## 🚀 قابلیت‌ها
+## 🪟 نسخه مستقل ویندوز
 
-- ورود کانفیگ VLESS
-- ورود دستی تارگت:
-  - تک IP
-  - CIDR
-  - Range
-  - Paste چندخطی
-- لیست آماده ISPها
-- دسته‌بندی ایران و International
-- انتخاب چند ISP برای اسکن
-- تنظیم concurrency / worker
-- Re-check اختیاری برای latency
-- Speed-test اختیاری
-- نمایش وضعیت زنده در Web UI
-- Live Ranking با latency، میانگین latency، تعداد pass و speed
-- Scan Progress با مرحله و درصد
-- خروجی‌های تمیز TXT
-- خروجی Best Configs و final ranked configs
-- حالت CLI برای نسخه Python scanner
+نسخه Windows Standalone ساده‌ترین روش اجرای اسکنر سیمرغ است.
+
+1. فایل Windows Standalone x64 را دانلود کنید.
+2. روی فایل `.exe` دابل‌کلیک کنید.
+3. Runtime داخلی به‌صورت محلی استخراج می‌شود.
+4. Web UI روی `http://127.0.0.1:21301` باز می‌شود.
+
+### ویژگی‌های نسخه Standalone
+
+- به نصب Python نیاز ندارد.
+- به اجرای `pip install` نیاز ندارد.
+- برای استخراج و اجرای اولیه به اینترنت نیاز ندارد.
+- Runtime پایتون، کتابخانه‌ها، فایل‌های اسکنر، Xray و Web UI داخل فایل قرار دارند.
+- اینترنت فقط هنگام اسکن یا آزمایش IPها لازم است.
+
 
 ---
 
-## 🖥️ نسخه Windows Web UI Single EXE
+## 🤖 نسخه Android APK v0.3.0
 
-راحت‌ترین نسخه ویندوز، Single EXE است:
-
-```text
-RKh-CFS-win-v0.2.0.exe
-```
-
-فقط روی فایل دابل‌کلیک کن.
-
-```
-
-بعد Web UI را اجرا می‌کند و این آدرس را باز می‌کند:
+نام فایل رسمی APK:
 
 ```text
-http://127.0.0.1:18080
+SIMORGH-Scanner-v0.3.0-arm64-v8.apk
 ```
 
-### پیش‌نیاز
+تنظیمات بیلد اندروید:
 
-Single EXE فایل‌های پروژه را داخل خودش دارد، اما برای اجرای Web UI هنوز به **Python 3 نصب‌شده روی ویندوز** نیاز دارد؛ چون backend وب‌یوآی نسخه ویندوز با Python اجرا می‌شود.
-
-بررسی نصب بودن Python:
-
-```powershell
-python --version
+```text
+versionName: 0.3.0
+ABI:         arm64-v8a
+minSdk:      24
+targetSdk:   35
 ```
 
-یا:
+### قابلیت‌های اندروید
 
-```powershell
-py --version
-```
+- از بک‌اند بومی Go استفاده می‌کند.
+- به Python یا Chaquopy وابسته نیست.
+- چیدمان Web UI اسکنر سیمرغ را حفظ می‌کند.
+- برای صفحه موبایل بهینه شده است.
+- از آدرس محلی `127.0.0.1:21301` استفاده می‌کند.
+- کتابخانه بومی Xray اندروید را داخل APK دارد.
+- نسخه رسمی APK توسط GitHub Actions هم‌تراز، امضا و اعتبارسنجی می‌شود.
 
-اگر Python نصب نیست، Python 3 را نصب کن و دوباره EXE را اجرا کن.
+> APK فعلی فقط از دستگاه‌های `arm64-v8a` پشتیبانی می‌کند.
 
 ---
 
-## 🪟 نسخه Windows Web UI package
+## 🎯 انتخاب تارگت
 
-اگر نسخه Extract شده Web UI را استفاده می‌کنی، ساختار پوشه باید این‌طور باشد:
-
-```text
-RKh-CFS-v0.2.0/
-├─ web_ui.py
-├─ RKh-CFS-v0.2.0.py
-├─ run_webui.bat
-├─ run_windows.bat
-├─ requirements.txt
-├─ xray.exe
-├─ geoip.dat
-├─ geosite.dat
-├─ ip-ranges/
-├─ web_runtime/
-└─ results/
-```
-
-نصب پیش‌نیازها:
-
-```powershell
-py -m pip install -r requirements.txt
-```
-
-اجرای Web UI:
-
-```powershell
-py web_ui.py
-```
-
-یا دابل‌کلیک روی:
-
-```text
-run_webui.bat
-```
-
-آدرس پیش‌فرض نسخه عادی Web UI:
-
-```text
-http://127.0.0.1:8080
-```
-
----
-
-## 🤖 نسخه Android APK v0.2.0
-
-اسم فایل نهایی APK نسخه Android این است:
-
-```text
-RKh-CFS-Android-v0.2.0.apk
-```
-
-وضعیت نسخه:
-
-```text
-versionName: 0.2.0-android
-```
-
-
-### قابلیت‌های Android APK
-
-- UI کامل Web UI حفظ شده است.
-- backend بومی Go دارد.
-- Chaquopy/Python backend حذف شده است.
-- UI برای موبایل بهینه شده است.
-- جدول Live Ranking برای گوشی فشرده‌تر شده است.
-- Logs به‌صورت Native Dialog نمایش داده می‌شود.
-
----
-
-## 🧭 مسیر انتخاب تارگت در Web UI
-
-در Web UI یکی از این دو حالت را انتخاب کن:
+یکی از دو حالت زیر را انتخاب کنید:
 
 ```text
 Manual targets
 ISP list
 ```
 
-Manual targets این مدل‌ها را قبول می‌کند:
+فرمت‌های ورودی دستی:
 
 ```text
 104.16.0.1
@@ -208,7 +204,7 @@ Manual targets این مدل‌ها را قبول می‌کند:
 104.16.0.1-104.16.0.255
 ```
 
-می‌توانی چند خط را یکجا Paste کنی:
+امکان Paste چندخطی:
 
 ```text
 104.16.0.0/24
@@ -216,67 +212,61 @@ Manual targets این مدل‌ها را قبول می‌کند:
 188.114.96.0-188.114.99.255
 ```
 
-در حالت ISP list دسته‌ها این‌ها هستند:
+دسته‌های داخلی ISP:
 
 ```text
 Iran
 International
 ```
 
-می‌توانی چند ISP را با checkbox انتخاب کنی یا از این گزینه‌ها استفاده کنی:
+بخش ISP از موارد زیر پشتیبانی می‌کند:
 
-```text
-Check all
-Clear
-```
+- انتخاب چندگانه
+- Check all
+- Clear
+- واردکردن لیست سفارشی `.txt`
 
 ---
 
-## 🎯 Maximum targets
+## ⚙️ قابلیت‌های اسکنر
 
-Maximum targets مشخص می‌کند چند تارگت لود/اسکن شود.
+- ورود کانفیگ VLESS
+- ورود IP تکی، CIDR، رنج و تارگت چندخطی
+- لیست‌های داخلی ISP ایران و بین‌الملل
+- Import لیست ISP با فرمت `.txt`
+- تنظیم تعداد Worker
+- Re-check اختیاری Latency
+- Speed Test اختیاری
+- کنترل‌های Stop، Continue، Clear و Cancel
+- نمایش وضعیت زنده برنامه
+- رتبه‌بندی زنده نتایج
+- صفحات مستقل Scanner، Results، Files و Log
+- خروجی‌های رتبه‌بندی‌شده TXT
+- Best Configs و Final Ranked Configs
+
+---
+
+## 🔢 Maximum targets
+
+گزینه `Maximum targets` تعداد تارگت‌های قابل بارگذاری و اسکن را مشخص می‌کند:
 
 ```text
 0 = بدون محدودیت / همه تارگت‌ها
 ```
 
-برای محدود کردن رنج‌های بزرگ، عدد وارد کن:
+نمونه محدودیت:
 
 ```text
 5000
 ```
 
----
-
-## 📊 Live Ranking
-
-Live Ranking یک جدول زنده نشان می‌دهد:
-
-```text
-Rank | IP | Stage | Latency | Avg Latency | Pass | Speed
-```
-
-مرتب‌سازی پیش‌فرض:
-
-```text
-Latency
-```
-
-با کلیک روی این ستون‌ها می‌توانی ترتیب را تغییر بدهی:
-
-```text
-IP
-Latency
-Avg Latency
-Pass
-Speed
-```
+برای رنج‌های بزرگ از تعداد Worker و محدودیت تارگت منطقی استفاده کنید.
 
 ---
 
 ## 📁 فایل‌های خروجی
 
-فایل‌ها از بخش Result Files در Web UI قابل دانلود هستند.
+فایل‌ها از صفحه **Files** قابل دریافت هستند.
 
 خروجی‌های رایج:
 
@@ -291,108 +281,43 @@ selected_rechecked_ips.txt
 selected_speed_tested_ips.txt
 ```
 
-نسخه Python scanner ممکن است برای سازگاری CSV هم بسازد، اما مسیر اصلی دانلود Web UI روی خروجی‌های TXT تمیز تمرکز دارد.
+---
+
+## 🛠️ رفع اشکالات نسخه 0.3.0
+
+- رفع مشکل بارگذاری فونت‌های سفارشی
+- اصلاح محل رادار
+- ثابت‌ماندن هدر بین صفحات
+- اصلاح رفتار و تأخیر کنترل‌های شناور
+- حذف حاشیه سفید ناخواسته هنگام Hover
+- رفع تداخل فایل `xray` با پوشه `Xray` در ویندوز
+- رفع مشکلات استخراج ZIP در Windows و WinRAR
+- اصلاح مسیرهای `xray.exe`، `geoip.dat` و `geosite.dat`
+- رفع خطای Local Access Token در نسخه Standalone
+- بهبود استخراج Runtime داخلی و مدیریت فایل‌های محلی
 
 ---
 
-# 📱 RKh-CFS Termux v0.2.0 - نسخه Android / Termux
+## 🔒 قابلیت‌های حفظ‌شده
 
-این نسخه برای اجرای مستقیم داخل Termux آماده شده است.
-
-## نصب و اجرا در Termux
-
-دستورهای زیر را دقیقاً داخل Termux اجرا کنید:
-
-```bash
-pkg update -y
-pkg install -y unzip
-pkg install python -y
-pkg install wget unzip -y
-mkdir -p RKh-CFS-Termux-v0.2.0
-cd RKh-CFS-Termux-v0.2.0
-wget https://github.com/rezakhosh78/RKh-CF-Scanner/releases/download/0.2.0/RKh-CFS-Termux-v0.2.0.zip
-unzip RKh-CFS-Termux-v0.2.0.zip
-pip install -r requirements.txt
-chmod +x run.sh
-./run.sh
-```
-
-## فایل‌هایی که باید دستی اضافه کنید
-
-این پکیج عمداً فایل‌های زیر را ندارد و باید خودتان آن‌ها را کنار `run.sh` و فایل Python قرار دهید:
-
-```text
-xray
-geoip.dat
-geosite.dat
-```
-
-ساختار پوشه بعد از Extract و اضافه کردن فایل‌ها:
-
-```text
-RKh-CFS-Termux-v0.2.0/
-├── RKh-CFS-Termux-v0.2.0.py
-├── run.sh
-├── requirements.txt
-├── xray
-├── geoip.dat
-├── geosite.dat
-├── ip-ranges/
-├── configs/
-└── results/
-```
-
-بعد از قرار دادن فایل `xray`، این دستور را هم بزنید:
-
-```bash
-chmod +x xray
-```
-
-> اندروید نمی‌تواند `xray.exe` ویندوز را اجرا کند. برای Termux باید باینری Android/Linux با نام `xray` استفاده شود.
-
----
-
-## 🧪 نمونه‌های CLI
-
-نمایش لیست ISPها:
-
-```bash
-python RKh-CFS-v0.2.0.py --list-isps
-```
-
-اسکن همه ISPهای ایران:
-
-```bash
-python RKh-CFS-v0.2.0.py -c "vless://..." --isp-category iran --isp all --max-hosts 0
-```
-
-اسکن چند ISP از دسته International:
-
-```bash
-python RKh-CFS-v0.2.0.py -c "vless://..." --isp-category international --isp Fastly Nocix --max-hosts 3000
-```
-
-اسکن دستی:
-
-```bash
-python RKh-CFS-v0.2.0.py -c "vless://..." -t 104.16.0.0/24 172.64.0.0/24 --concurrency 20
-```
+- منطق اصلی اسکن IP حفظ شده است.
+- Latency، Re-check، Pass و Speed Test همچنان در دسترس هستند.
+- خروجی‌های رتبه‌بندی‌شده TXT حفظ شده‌اند.
+- ISPهای ایران و بین‌الملل پشتیبانی می‌شوند.
 
 ---
 
 ## ⚙️ نکات کاربردی
 
-- نسخه Windows Web UI Single EXE از پورت `18080` استفاده می‌کند.
-- نسخه عادی Windows Web UI از پورت `8080` استفاده می‌کند.
-- concurrency را خیلی بالا نگذار.
-- concurrency پیشنهادی ویندوز: `10` تا `30`
-- concurrency پیشنهادی Android Go: `15` تا `30`
-- برای speed-test روی موبایل، speed workers را `2` یا `3` بگذار.
-- اگر runtime نسخه Single EXE خراب شد، پوشه مربوطه را از `%LOCALAPPDATA%\RKh-CFS` پاک کن و EXE را دوباره اجرا کن.
+- آدرس Web UI: `http://127.0.0.1:21301`
+- Worker پیشنهادی ویندوز: `10` تا `30`
+- Worker پیشنهادی Android Go: `15` تا `30`
+- Speed Worker پیشنهادی موبایل: `2` یا `3`
+- Concurrency بسیار بالا می‌تواند پایداری اسکن را کاهش دهد.
 
 ---
 
-## ⚠️ Donate
+## 💚 حمایت مالی
 
 USDT BEP20:
 
@@ -404,6 +329,8 @@ USDT BEP20:
 
 ## ⚠️ مسئولیت استفاده
 
-RKh-CFS برای تست کانفیگ شخصی و رنج‌های مجاز ساخته شده است. مسئولیت استفاده از ابزار با خود کاربر است.
+SIMORGH Scanner برای آزمایش کانفیگ‌های شخصی و رنج‌های مجاز ساخته شده است. مسئولیت نحوه استفاده از ابزار با کاربر است.
 
 کانال: `@pingplas_channel`
+
+</div>
