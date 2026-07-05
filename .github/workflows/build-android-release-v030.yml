@@ -1,0 +1,632 @@
+name: Build & Release Signed Android APK v0.3.0
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v0.3.0"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: simorgh-android-release-v0.3.0
+  cancel-in-progress: false
+
+env:
+  VERSION: "0.3.0"
+  TAG_NAME: "v0.3.0"
+  APK_NAME: "SIMORGH-Scanner-v0.3.0-arm64-v8.apk"
+  ANDROID_PROJECT_DIR: "Android"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  build-sign-release:
+    name: Build, sign and publish arm64-v8 APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+          cache-dependency-path: |
+            Android/*.gradle
+            Android/gradle.properties
+            Android/gradle/wrapper/gradle-wrapper.properties
+            Android/app/*.gradle
+
+      - name: Set up Go 1.22
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache: true
+          cache-dependency-path: Android/go-backend/go.mod
+
+      - name: Validate required signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+
+          [ -n "$KEYSTORE_BASE64" ] || { echo "❌ Missing secret: ANDROID_KEYSTORE_BASE64"; exit 1; }
+          [ -n "$KEYSTORE_PASSWORD" ] || { echo "❌ Missing secret: ANDROID_KEYSTORE_PASSWORD"; exit 1; }
+          [ -n "$KEY_ALIAS" ] || { echo "❌ Missing secret: ANDROID_KEY_ALIAS"; exit 1; }
+          [ -n "$KEY_PASSWORD" ] || { echo "❌ Missing secret: ANDROID_KEY_PASSWORD"; exit 1; }
+
+          echo "✅ All Android signing secrets are available."
+
+      - name: Install Android SDK packages
+        run: |
+          set -euo pipefail
+
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
+
+      - name: Validate Android project
+        run: |
+          set -euo pipefail
+
+          test -f Android/gradlew
+          test -f Android/settings.gradle
+          test -f Android/build.gradle
+          test -f Android/app/build.gradle
+          test -f Android/go-backend/go.mod
+          test -f Android/go-backend/main.go
+          test -f Android/app/src/main/jniLibs/arm64-v8a/libxray.so
+
+          grep -q 'versionName "0.3.0"' Android/app/build.gradle
+          grep -q 'abiFilters "arm64-v8a"' Android/app/build.gradle
+
+          echo "✅ Android project, versionName and arm64 ABI configuration are valid."
+
+
+      - name: Apply v0.3.0 local server settings
+        run: |
+          set -euo pipefail
+
+          sed -i 's/const port = "8080"/const port = "21301"/' \
+            Android/go-backend/main.go
+
+          sed -i 's#http://127.0.0.1:8080#http://127.0.0.1:21301#g' \
+            Android/app/src/main/java/com/rkhcfs/go/MainActivity.java
+
+          grep -q 'const port = "21301"' Android/go-backend/main.go
+          grep -q 'http://127.0.0.1:21301' \
+            Android/app/src/main/java/com/rkhcfs/go/MainActivity.java
+
+          echo "✅ Android backend and WebView are configured for 127.0.0.1:21301."
+
+      - name: Build native Go backend for Android arm64
+        working-directory: Android/go-backend
+        run: |
+          set -euo pipefail
+
+          OUTPUT="../app/src/main/jniLibs/arm64-v8a/librkhcfs_go.so"
+          mkdir -p "$(dirname "$OUTPUT")"
+          rm -f "$OUTPUT"
+
+          GOOS=android \
+          GOARCH=arm64 \
+          CGO_ENABLED=0 \
+          go build \
+            -buildmode=pie \
+            -trimpath \
+            -ldflags="-s -w" \
+            -o "$OUTPUT" \
+            .
+
+          test -s "$OUTPUT"
+
+          SIZE="$(stat -c%s "$OUTPUT")"
+          if [ "$SIZE" -lt 1048576 ]; then
+            echo "❌ Native Go backend is unexpectedly small: $SIZE bytes"
+            exit 1
+          fi
+
+          file "$OUTPUT"
+          echo "✅ Native Go backend created: $OUTPUT ($SIZE bytes)"
+
+      - name: Build unsigned release APK
+        working-directory: Android
+        run: |
+          set -euo pipefail
+
+          chmod +x gradlew
+          ./gradlew \
+            --no-daemon \
+            --stacktrace \
+            --warning-mode all \
+            clean \
+            :app:assembleRelease
+
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          KEYSTORE_PATH="$RUNNER_TEMP/rkh-cfs-release.p12"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          test -s "$KEYSTORE_PATH"
+
+          keytool \
+            -list \
+            -v \
+            -keystore "$KEYSTORE_PATH" \
+            -storetype PKCS12 \
+            -storepass "$KEYSTORE_PASSWORD" \
+            -alias "$KEY_ALIAS" \
+            | grep -E 'Alias name:|SHA1:|SHA256:|Valid from:' || true
+
+          echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
+          echo "✅ Keystore decoded and alias validated."
+
+      - name: Align and sign APK
+        env:
+          ANDROID_KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+
+          BUILD_TOOLS_DIR="$ANDROID_HOME/build-tools/35.0.0"
+          ZIPALIGN="$BUILD_TOOLS_DIR/zipalign"
+          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+
+          test -x "$ZIPALIGN"
+          test -x "$APKSIGNER"
+
+          UNSIGNED_APK="$(find Android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*-unsigned.apk' -print -quit)"
+
+          if [ -z "$UNSIGNED_APK" ]; then
+            UNSIGNED_APK="$(find Android/app/build/outputs/apk/release -maxdepth 1 -type f -name '*.apk' -print -quit)"
+          fi
+
+          [ -n "$UNSIGNED_APK" ] || { echo "❌ Release APK was not generated."; exit 1; }
+          test -f "$UNSIGNED_APK"
+
+          mkdir -p dist
+          ALIGNED_APK="$RUNNER_TEMP/SIMORGH-Scanner-v${VERSION}-aligned.apk"
+          FINAL_APK="dist/$APK_NAME"
+
+          "$ZIPALIGN" \
+            -P 16 \
+            -f \
+            -v \
+            4 \
+            "$UNSIGNED_APK" \
+            "$ALIGNED_APK"
+
+          "$APKSIGNER" sign \
+            --ks "$KEYSTORE_PATH" \
+            --ks-type PKCS12 \
+            --ks-key-alias "$ANDROID_KEY_ALIAS" \
+            --ks-pass env:ANDROID_KS_PASS \
+            --key-pass env:ANDROID_KEY_PASS \
+            --v1-signing-enabled true \
+            --v2-signing-enabled true \
+            --v3-signing-enabled true \
+            --out "$FINAL_APK" \
+            "$ALIGNED_APK"
+
+          "$ZIPALIGN" -c -P 16 -v 4 "$FINAL_APK"
+
+          "$APKSIGNER" verify \
+            --verbose \
+            --print-certs \
+            "$FINAL_APK"
+
+          test -s "$FINAL_APK"
+          echo "✅ Signed APK created: $FINAL_APK"
+
+      - name: Verify arm64-v8 APK contents
+        run: |
+          set -euo pipefail
+
+          APK="dist/$APK_NAME"
+
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/librkhcfs_go.so'
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libxray.so'
+
+          if unzip -l "$APK" | grep -Eq 'lib/(armeabi-v7a|x86|x86_64)/'; then
+            echo "❌ Unexpected non-arm64 ABI found in APK."
+            exit 1
+          fi
+
+          echo "✅ APK contains only the intended arm64-v8a native libraries."
+          ls -lh "$APK"
+          sha256sum "$APK"
+
+      - name: Write bilingual release changelog
+        run: |
+          cat > release-notes.md <<'EOF'
+          # 🦅 RKh-CFS v0.3.0 Changelog
+
+          ## 🇮🇷 فارسی
+
+          ### 🎨 رابط کاربری
+
+          - بازطراحی کامل Web UI با ظاهر نئونی، رترو و مناسب ویندوز
+          - تغییر نام رابط به **SIMORGH SCANNER**
+          - اضافه‌شدن هدر ثابت در تمام صفحات شامل:
+            - 🌐 انتخاب زبان `FA / EN`
+            - 📡 رادار متحرک
+            - 🟢 وضعیت اجرای برنامه
+          - بهبود نمایش رابط در رزولوشن‌ها و اندازه‌های مختلف
+
+          ### 📑 ساختار صفحات
+
+          رابط کاربری به چهار برگه مستقل تقسیم شد:
+
+          - 🔍 **Scanner**
+          - 📊 **Results**
+          - 📁 **Files**
+          - 🧾 **Log**
+
+          همچنین:
+
+          - صفحه پیش‌فرض ورود روی **Scanner** تنظیم شد
+          - بعد از زدن دکمه Start Scan، برنامه خودکار وارد صفحه **Results** می‌شود
+          - بخش **Live Work Log** به یک صفحه جدا منتقل شد
+
+          ### 🔍 بخش Scanner
+
+          - اضافه‌شدن دکمه‌های کنترلی:
+            - ▶️ Start Scan
+            - ⏹️ Stop
+            - ⏯️ Continue
+            - 🧹 Clear
+            - ❌ Cancel
+          - تنظیم ISP پیش‌فرض روی **International**
+          - انتقال رادار متحرک به هدر کنار دکمه‌های `FA / EN`
+
+          ### 📊 بخش Results
+
+          - بازطراحی نتایج به‌صورت کارت‌های نئونی مستقل
+          - نمایش هر IP در یک کارت جداگانه
+          - اضافه‌شدن آیکن‌های نئونی برای:
+            - ⚡ Latency
+            - 📈 Average Latency
+            - ✅ Pass
+            - 🚀 Speed
+          - قرارگرفتن بخش `SORT BY` داخل حباب مستقل
+          - امکان مرتب‌سازی بر اساس:
+            - ⚡ Latency
+            - 📈 Average Latency
+            - ✅ Pass
+            - 🚀 Speed
+
+          ### 📶 نمایش پیشرفت اسکن
+
+          نوار پیشرفت قبلی با سه کارت نئونی جداگانه جایگزین شد:
+
+          - 🔵 `SCAN`
+          - 🟣 `RE-CHECK`
+          - 🟪 `SPEED`
+
+          هر کارت اطلاعات زیر را نمایش می‌دهد:
+
+          - درصد پیشرفت
+          - تعداد انجام‌شده
+          - تعداد باقی‌مانده
+          - وضعیت فعلی مرحله
+
+          همچنین خلاصه وضعیت شامل موارد زیر نمایش داده می‌شود:
+
+          - ✅ Clean
+          - ❌ Fail
+          - 🔄 Re-check
+          - 🚀 Speed
+
+          ### 📌 کنترل‌های شناور
+
+          - حباب دکمه‌ها در حالت عادی بالای `SORT BY` قرار دارد
+
+          ### 🧭 پیمایش
+
+          - اضافه‌شدن نوار ناوبری ثابت بین صفحات
+          - اضافه‌شدن دکمه رفتن به ابتدای صفحه
+          - قرارگرفتن دکمه بازگشت به بالا در گوشه پایین سمت راست
+
+          ### 🌐 تنظیمات سرور محلی
+
+          آدرس ثابت Web UI:
+
+          ```text
+          http://127.0.0.1:21301
+          ```
+
+          تنظیمات:
+
+          - 🖥️ Local IP: `127.0.0.1`
+          - 🔌 Port: `21301`
+          - 🏷️ Version: `v0.3.0`
+
+          متن CMD از:
+
+          ```text
+          🧩 Scanner: RKh-CFS-v0.3.0.py
+          ```
+
+          به این مقدار تغییر کرد:
+
+          ```text
+          🧩 Scanner: web_ui.py
+          ```
+
+          ### 📂 ساختار فایل‌ها
+
+          نام پوشه اصلی پروژه:
+
+          ```text
+          RKh-CFS-v0.3.0
+          ```
+
+          نام فایل اصلی اسکنر:
+
+          ```text
+          RKh-CFS-v0.3.0.py
+          ```
+
+          فایل‌های Xray به پوشه مستقل منتقل شدند:
+
+          ```text
+          Xray/
+          ├── xray.exe
+          ├── geoip.dat
+          └── geosite.dat
+          ```
+
+          فونت‌ها نیز داخل پوشه زیر قرار گرفتند:
+
+          ```text
+          Font/
+          ├── SuperPixel-m2L8j.ttf
+          └── PsygenDemo-AREoM.otf
+          ```
+
+          ### 🛠️ رفع اشکالات
+
+          - رفع پرش نامناسب حباب هنگام بازگشت
+          - رفع خطای استخراج ZIP در Windows و WinRAR
+          - اصلاح مسیر اجرای `xray.exe`
+          - اصلاح مسیر فایل‌های `geoip.dat` و `geosite.dat`
+
+          ### 🔒 قابلیت‌های حفظ‌شده
+
+          - منطق اصلی اسکن IP بدون تغییر اساسی حفظ شده است
+          - بررسی Latency، Re-check، Pass و Speed حفظ شده است
+          - خروجی فایل‌های متنی رتبه‌بندی‌شده حفظ شده است
+          - پشتیبانی از ISPهای ایران و بین‌الملل حفظ شده است
+
+          ---
+
+          ## 🇬🇧 English
+
+          ### 🎨 User Interface
+
+          - Completely redesigned the Web UI with a neon retro Windows-friendly appearance
+          - Renamed the interface to **SIMORGH SCANNER**
+          - Added a soft neon flickering animation to the application title
+          - Added a persistent header across all pages containing:
+            - 🌐 `FA / EN` language selector
+            - 📡 Animated radar
+            - 🟢 Current running status
+          - Removed the unnecessary frame around the radar animation
+          - Improved responsive behavior for different screen sizes
+
+          ### 📑 Page Structure
+
+          The Web UI is now divided into four independent pages:
+
+          - 🔍 **Scanner**
+          - 📊 **Results**
+          - 📁 **Files**
+          - 🧾 **Log**
+
+          Additional changes:
+
+          - **Scanner** is now the default landing page
+          - Starting a scan automatically opens the **Results** page
+          - **Live Work Log** was moved into its own dedicated page
+
+          ### 🔍 Scanner Page
+
+          - Added scanner control buttons:
+            - ▶️ Start Scan
+            - ⏹️ Stop
+            - ⏯️ Continue
+            - 🧹 Clear
+            - ❌ Cancel
+          - Changed the default ISP category to **International**
+          - Moved the animated radar into the main header beside `FA / EN`
+
+          ### 📊 Results Page
+
+          - Redesigned scan results as independent neon cards
+          - Each scanned IP is displayed in a separate card
+          - Added neon icons for:
+            - ⚡ Latency
+            - 📈 Average Latency
+            - ✅ Pass
+            - 🚀 Speed
+          - Added a selection animation when hovering over IP cards
+          - Added a soft blinking purple neon light behind `SCAN RESULTS`
+          - Added a small blinking neon indicator beside the results title
+          - Placed `SORT BY` inside a separate neon bubble
+          - Added sorting options for:
+            - ⚡ Latency
+            - 📈 Average Latency
+            - ✅ Pass
+            - 🚀 Speed
+
+          ### 📶 Scan Progress
+
+          The previous progress bar was replaced with three independent neon progress cards:
+
+          - 🔵 `SCAN`
+          - 🟣 `RE-CHECK`
+          - 🟪 `SPEED`
+
+          Each card displays:
+
+          - Progress percentage
+          - Completed target count
+          - Remaining target count
+          - Current stage status
+
+          A summary line also displays:
+
+          - ✅ Clean
+          - ❌ Fail
+          - 🔄 Re-check
+          - 🚀 Speed
+
+          ### 📌 Floating Controls
+
+          - The scanner control bubble normally stays above `SORT BY`
+          - It becomes floating only after scrolling outside the visible area
+          - It automatically returns to its original position when scrolling upward
+          - Added smooth enter and exit animations
+          - Removed the delay when switching between normal and floating modes
+          - Restored button hover animations while floating
+          - Prevented the floating panel border from turning white on hover
+
+          ### 🧭 Navigation
+
+          - Added a persistent bottom navigation bar
+          - Added a scroll-to-top button
+          - Moved the scroll-to-top button to the bottom-right corner
+
+          ### 🌐 Local Server Configuration
+
+          The Web UI now uses the fixed local address:
+
+          ```text
+          http://127.0.0.1:21301
+          ```
+
+          Configuration:
+
+          - 🖥️ Local IP: `127.0.0.1`
+          - 🔌 Port: `21301`
+          - 🏷️ Version: `v0.3.0`
+
+          The CMD scanner label was changed from:
+
+          ```text
+          🧩 Scanner: RKh-CFS-v0.3.0.py
+          ```
+
+          to:
+
+          ```text
+          🧩 Scanner: web_ui.py
+          ```
+
+          ### 📂 Project Structure
+
+          The main project directory is now:
+
+          ```text
+          RKh-CFS-v0.3.0
+          ```
+
+          The main scanner file is now:
+
+          ```text
+          RKh-CFS-v0.3.0.py
+          ```
+
+          Xray-related files were moved into:
+
+          ```text
+          Xray/
+          ├── xray.exe
+          ├── geoip.dat
+          └── geosite.dat
+          ```
+
+          Font files were moved into:
+
+          ```text
+          Font/
+          ├── SuperPixel-m2L8j.ttf
+          └── PsygenDemo-AREoM.otf
+          ```
+
+          ### 🛠️ Bug Fixes
+
+          - Fixed custom fonts not loading correctly
+          - Fixed incorrect radar positioning
+          - Fixed the header not remaining persistent between pages
+          - Fixed floating control panel behavior
+          - Removed floating transition delays
+          - Improved the animation when returning to the original position
+          - Fixed white borders appearing during hover
+          - Fixed the Windows conflict between the `xray` file and `Xray` directory
+          - Fixed ZIP extraction errors in Windows and WinRAR
+          - Updated the `xray.exe` execution path
+          - Updated `geoip.dat` and `geosite.dat` paths
+
+          ### 🔒 Preserved Features
+
+          - Core IP scanning logic remains unchanged
+          - Latency, Re-check, Pass and Speed testing remain available
+          - Ranked `.txt` result exports remain available
+          - Iranian and international ISP lists remain supported
+          EOF
+
+      - name: Upload signed APK as workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SIMORGH-Scanner-v0.3.0-arm64-v8
+          path: dist/SIMORGH-Scanner-v0.3.0-arm64-v8.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create or update GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          APK="dist/$APK_NAME"
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "ℹ️ Release $TAG_NAME already exists; updating notes and APK."
+            gh release edit "$TAG_NAME" \
+              --title "SIMORGH Scanner v${VERSION}" \
+              --notes-file release-notes.md
+
+            gh release upload "$TAG_NAME" \
+              "$APK" \
+              --clobber
+          else
+            echo "ℹ️ Creating release $TAG_NAME."
+            gh release create "$TAG_NAME" \
+              "$APK" \
+              --target "$GITHUB_SHA" \
+              --title "SIMORGH Scanner v${VERSION}" \
+              --notes-file release-notes.md
+          fi
+
+          echo "✅ Release published with asset: $APK_NAME"
